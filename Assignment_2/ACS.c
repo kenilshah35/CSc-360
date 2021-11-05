@@ -17,9 +17,12 @@ typedef struct clerk_info{
 	int avail;
 }clerk;
 
+#define NQUEUES 2
+#define NCLERKS 5
+
 /*Global Variables*/
-int NQUEUES = 2
-int NCLERKS = 5
+//int NQUEUES = 2;
+//int NCLERKS = 5;
 
 struct timeval init_time;
 double overall_waiting_time;
@@ -28,8 +31,9 @@ double class_waiting_time[NQUEUES];
 customer* customer_list;
 customer* queue[NQUEUES];
 int queue_length[NQUEUES];
-int queue_status[NQUEUES] = {-1, -1};
+int queue_status[NQUEUES];
 clerk clerk_list[NCLERKS];
+int customers_remaining;
 
 pthread_mutex_t queue_mutex;
 pthread_mutex_t clerk1_mutex;
@@ -57,9 +61,9 @@ void dequeue(int qid){
 		exit(1);
 	}
 	for(int i=0;i<queue_length[qid]-1;i++){
-		queue[qid][i] = queue[qid][i+1]
+		queue[qid][i] = queue[qid][i+1];
 	}
-	queue_length = queue_length - 1;
+	queue_length[qid] = queue_length[qid] - 1;
 }
 
 double getCurrentSimulationTime(){
@@ -76,11 +80,11 @@ double getCurrentSimulationTime(){
 void* customer_entry(void* cus_info){
 	
 	customer* p_myInfo = (customer*) cus_info;
-	int ctype = p_myInfo.class_type;
+	int ctype = p_myInfo->class_type;
 
-	usleep(p_myInfo.arrival_time * 100000);
+	usleep(p_myInfo->arrival_time * 100000);
 
-	printf("A customer arrives: customer ID %2d.\n", p_myInfo.user_id);
+	printf("A customer arrives: customer ID %2d.\n", p_myInfo->user_id);
 
 	pthread_mutex_lock(&queue_mutex);
 
@@ -95,18 +99,21 @@ void* customer_entry(void* cus_info){
 			pthread_cond_wait(&business_con, &queue_mutex);
 		}
 		else{
-			printf("\nError while cond wait in customer thread\n")
+			printf("\nError while cond wait in customer thread\n");
 		}
 	}
 	double queue_exit_time = getCurrentSimulationTime();
-	class_waiting_time[ctype] = class_waiting_time[ctype] + (queue_exit_time - queue_start_time);
+	class_waiting_time[ctype] = class_waiting_time[ctype] + (queue_exit_time - queue_enter_time);
 	int clerk_id = queue_status[ctype];
-	printf("A clerk starts serving a customer: start time %.2f, the customer ID %2d, the clerk ID %1d.\n", getCurrentSimulationTime(), p_myInfo.user_id, clerk_id);
+	printf("A clerk starts serving a customer: start time %.2f, the customer ID %2d, the clerk ID %1d.\n", getCurrentSimulationTime(), p_myInfo->user_id, clerk_id);
 	
 	pthread_mutex_unlock(&queue_mutex);
 	
-	usleep(p_myInfo.service_time * 100000);
-	printf("A clerk finishes serving a customer: end time %.2f, the customer ID %2d, the clerk ID %1d.\n",getCurrentSimulationTime(), p_myInfo.user_id, clerk_id);
+	usleep(p_myInfo->service_time * 100000);
+	printf("A clerk finishes serving a customer: end time %.2f, the customer ID %2d, the clerk ID %1d.\n",getCurrentSimulationTime(), p_myInfo->user_id, clerk_id);
+	pthread_mutex_lock(&queue_mutex);
+	customers_remaining = customers_remaining - 1;
+	pthread_mutex_unlock(&queue_mutex);
 
 	if(clerk_id == 1){
 		pthread_mutex_lock(&clerk1_mutex);
@@ -136,7 +143,7 @@ void* customer_entry(void* cus_info){
                 pthread_cond_signal(&clerk5_con);
                 pthread_mutex_unlock(&clerk5_mutex);
 	}else{
-		printf("\nInvalid clerk id in customer thread\n")
+		printf("\nInvalid clerk id in customer thread\n");
 	}
 
 	pthread_exit(NULL);
@@ -150,7 +157,7 @@ void* clerk_entry(void* clerk_info){
 	while(1){
 		pthread_mutex_lock(&queue_mutex);
 		
-		int clerk_id = q_myInfo.id;
+		int clerk_id = q_myInfo->id;
 		int prio_index = 1;
 		if(queue_length[prio_index] <= 0){
 			prio_index = 0;
@@ -205,8 +212,14 @@ void* clerk_entry(void* clerk_info){
 				printf("\nInvalid clerk id in clerk thread\n");
 			}
 		}
+		
+		if(customers_remaining <= 0){
+			pthread_exit(NULL);
+		}
+		
 
 	}
+	//printf("\n\nRemaining customers %2d\n\n", customers_remaining);
 
 	pthread_exit(NULL);
 	return NULL;
@@ -233,6 +246,8 @@ int main(int argc, char* argv[]){
 		clerk_list[i].id = i+1;
 		clerk_list[i].avail = 0;
 	}
+	queue_status[0] = -1;
+	queue_status[1] = -1;
 
 	customer temp_cus;
 	for(int i=0;i<total_cus;i++){
@@ -248,12 +263,12 @@ int main(int argc, char* argv[]){
 			total_business_cus = total_business_cus + 1;
 		}
 		else{
-			total_economy_cus = total_economy_sus + 1;
+			total_economy_cus = total_economy_cus + 1;
 		}
 	}
 
 	fclose(file);
-
+	customers_remaining = total_cus;
 	gettimeofday(&init_time, NULL);
 
 	if(pthread_mutex_init(&queue_mutex, NULL) != 0){
@@ -310,6 +325,8 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 	
+	//printf("Before creating");
+
 	pthread_t clerk_thread[NCLERKS];
 	for(int i=0;i<NCLERKS;i++){
 		if(pthread_create(&clerk_thread[i], NULL, clerk_entry, (void*)&clerk_list[i]) != 0){
@@ -325,13 +342,26 @@ int main(int argc, char* argv[]){
 			return 1;
 		}
 	}
+	//printf("Before joining");
 
 	for(int i=0;i<total_cus;i++){
+		//printf("\njoining cus: %d\n", i);
 		if(pthread_join(cus_thread[i], NULL) != 0){
 			printf("\nerror while joining cus threads\n");
 			return 1;
 		}
 	}
+	
+	for(int i=0;i<NCLERKS;i++){
+		//printf("\njoining clerk before: %d\n", i);
+		if(pthread_join(clerk_thread[i], NULL) != 0){
+			printf("\nerror while joining clerk threads\n");
+			return 1;
+		}
+		//printf("\njoining clerk after: %d\n", i);
+	}
+
+	//printf("Before destruction");
 
 	pthread_mutex_destroy(&queue_mutex);
 	pthread_mutex_destroy(&clerk1_mutex);
