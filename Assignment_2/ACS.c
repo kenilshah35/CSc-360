@@ -24,7 +24,7 @@ typedef struct clerk_info{
 //int NQUEUES = 2;
 //int NCLERKS = 5;
 
-struct timeval init_time;
+static struct timeval init_time;
 double overall_waiting_time;
 double class_waiting_time[NQUEUES];
 
@@ -103,6 +103,7 @@ void* customer_entry(void* cus_info){
 		}
 	}
 	double queue_exit_time = getCurrentSimulationTime();
+	//printf("\n%.2f\n", (queue_exit_time - queue_enter_time));
 	class_waiting_time[ctype] = class_waiting_time[ctype] + (queue_exit_time - queue_enter_time);
 	int clerk_id = queue_status[ctype];
 	printf("A clerk starts serving a customer: start time %.2f, the customer ID %2d, the clerk ID %1d.\n", getCurrentSimulationTime(), p_myInfo->user_id, clerk_id);
@@ -232,7 +233,7 @@ int main(int argc, char* argv[]){
 	int total_business_cus = 0;
 	int total_economy_cus = 0;
 	char input[256];
-
+	
 	fgets(input, sizeof(input), file);
 	total_cus = atoi(input);
 	
@@ -248,6 +249,8 @@ int main(int argc, char* argv[]){
 	}
 	queue_status[0] = -1;
 	queue_status[1] = -1;
+	class_waiting_time[0] = 0.0;
+	class_waiting_time[1] = 0.0;
 
 	customer temp_cus;
 	for(int i=0;i<total_cus;i++){
@@ -351,7 +354,21 @@ int main(int argc, char* argv[]){
 			return 1;
 		}
 	}
+
+	printf("The average waiting time for all customers in the system is: %.2f seconds.\n", (class_waiting_time[0] + class_waiting_time[1]/total_cus));
+	printf("The average waiting time for all business-class customers is: %.2f seconds.\n", class_waiting_time[1]/total_business_cus);
+        printf("The average waiting time for all economy-class customers is: %.2f seconds.\n", class_waiting_time[0]/total_economy_cus);
 	
+	while(1){
+		if(getCurrentSimulationTime() > 170.0){
+			free(customer_list);
+	                free(queue[0]);
+	                free(queue[1]);
+	                return 0;
+		}
+	}
+
+	/*
 	for(int i=0;i<NCLERKS;i++){
 		//printf("\njoining clerk before: %d\n", i);
 		if(pthread_join(clerk_thread[i], NULL) != 0){
@@ -359,7 +376,7 @@ int main(int argc, char* argv[]){
 			return 1;
 		}
 		//printf("\njoining clerk after: %d\n", i);
-	}
+	}*/
 
 	//printf("Before destruction");
 
@@ -378,9 +395,9 @@ int main(int argc, char* argv[]){
 	pthread_cond_destroy(&clerk4_con);
 	pthread_cond_destroy(&clerk5_con);
 	
-	printf("The average waiting time for all customers in the system is: %.2f seconds.\n", (class_waiting_time[0] + class_waiting_time[1]/total_cus));
-	printf("The average waiting time for all business-class customers is: %.2f seconds.\n", class_waiting_time[1]/total_business_cus);
-	printf("The average waiting time for all economy-class customers is: %.2f seconds.\n", class_waiting_time[0]/total_economy_cus);
+	//printf("The average waiting time for all customers in the system is: %.2f seconds.\n", (class_waiting_time[0] + class_waiting_time[1]/total_cus));
+	//printf("The average waiting time for all business-class customers is: %.2f seconds.\n", class_waiting_time[1]/total_business_cus);
+	//printf("The average waiting time for all economy-class customers is: %.2f seconds.\n", class_waiting_time[0]/total_economy_cus);
 
 	free(customer_list);
 	free(queue[0]);
