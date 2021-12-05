@@ -46,19 +46,18 @@ int main(int argc, char* argv[]){
 		exit(1);
 	}
 
-
 	char* osName = malloc(sizeof(char));
 	int i;
 	for(i=0;i<8;i++){
-		i
 		osName[i] = p[i+3];
 	}
 
+	/*
 	char* labelDisk = malloc(sizeof(char));
 	//Check if in boot sector
 	int j;
 	for(j=0;j<8;j++){
-		labelDisk[j] = p[j+43]
+		labelDisk[j] = p[j+43];
 	}
 	//if not, check in root directory
 	if(labelDisk[0] == ' '){
@@ -72,33 +71,58 @@ int main(int argc, char* argv[]){
 			}
 			p = p + 32;
 		}
-	}
+	}*/
 
 	//Total size of disk
 	int numOfSectors = p[19] + (p[20]<<8);
+	printf("\n\n\n num sectors: %d\n\n\n", p[19]);
 	int totalDiskSize = numOfSectors*512;
 
 	//Free size of the disk
 	int cntFreeSectors = 0;
 	int l;
 	for(l=2;l<2848;l++){
-		if(getFATentry(l, p) == 0x00){
-			cntFreeSector++;
+		if(getFATentry(l, p) == 0x000){
+			cntFreeSectors++;
 		}
 	}
 	int freeSizeDisk = cntFreeSectors*512;
+
+	//TBD
 	int totalFiles = 1;
 
 	int numOfFATcopies = p[16];
-	int sectorsFat = p[22] + (p[23] << 8);
+
+	int sectorsFat = p[22] + (p[23]<<8);
+	
+	char* labelDisk = malloc(sizeof(char));
+	int j;
+	for(j=0;j<8;j++){
+		labelDisk[j] = p[j+43];	
+	}
+	if(labelDisk[0] == ' '){
+		p = p + 512*19;
+		while(p[0] != 0x00){
+			if(p[11] == 8){
+				int k;
+				for(k=0;k<8;k++){
+					labelDisk[k] = p[k];
+				}
+			}
+			p = p+32;
+		}
+	}
+
+
 
 	//Prints information
 	printf("OS Name: %s\n", osName);
 	printf("Label of the disk: %s\n", labelDisk);
 	printf("Total size of the disk: %d bytes\n", totalDiskSize);
-	printf("Free size og the disk: %d bytes\n", freeSizeDisk);
+	printf("Free size of the disk: %d bytes\n", freeSizeDisk);
 	printf("\n==============\n");
-	printf("The number of files in the disk (including all files in the root directory and files in all subdirectories): %d\n", totalFiles);
+	printf("The number of files in the disk (including all files in the root directory and files in all subdirectories): %d", totalFiles);
+	printf("\n==============\n");
 	printf("Number of FAT copies: %d\n", numOfFATcopies);
 	printf("Sectors per FAT: %d\n", sectorsFat);
 
@@ -108,7 +132,6 @@ int main(int argc, char* argv[]){
 	free(labelDisk);
 
 	return 0;
-	
 }
 
 
