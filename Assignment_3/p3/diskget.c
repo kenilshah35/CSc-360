@@ -33,7 +33,7 @@ int sizeOfFile(char* originalFilename, char* ptr){
 	int fileSize = -1;
 
 	while(ptr[0] != 0x00){
-		if((ptr[11] & 0b00000010) == 0 && (ptr[11] & 0b00001000) == 0) {
+		if( ptr[11] != 0x0F  &&(ptr[11] & 0x02) == 0x00 && (ptr[11]&0x08) == 0x00 ) {
 			char* filename = malloc(sizeof(char));
 			int i;
 			for(i=0;i<8;i++){
@@ -70,7 +70,7 @@ int firstLogicalSectorAddress(char* originalFilename, char* ptr){
 	int address = -1;
 
 	while(ptr[0] != 0x00){
-		if((ptr[11] & 0b00000010) == 0 && (ptr[11] & 0b00001000) == 0){
+		if(ptr[11] != 0x0F  &&(ptr[11] & 0x02) == 0x00 && (ptr[11]&0x08) == 0x00){
 			char* filename = malloc(sizeof(char));
 			int i;
 			for(i=0;i<8;i++){
