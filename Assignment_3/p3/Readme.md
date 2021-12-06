@@ -4,7 +4,7 @@
 
 " How to run:
 
-First you need to extract the p2.tar.gz into a folder using tar -zxvf p3.tar.gz. In order to compile the source codes, you can simply put 'make' in the console.
+First you need to extract the p3.tar.gz into a folder using tar -zxvf p3.tar.gz. In order to compile the source codes, you can simply put 'make' in the console.
 
 To run diskinfo: ./diskinfo disk.IMA
 
