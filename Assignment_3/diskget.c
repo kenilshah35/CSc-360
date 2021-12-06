@@ -30,7 +30,7 @@ int getFATentry(int n, char* ptr){
 
 
 int sizeOfFile(char* originalFilename, char* ptr){
-	int result = -1;
+	int fileSize = -1;
 
 	while(ptr[0] != 0x00){
 		if((ptr[11] & 0b00000010) == 0 && (ptr[11] & 0b00001000) == 0) {
@@ -46,6 +46,9 @@ int sizeOfFile(char* originalFilename, char* ptr){
 			char* ext = malloc(sizeof(char));
 			int j;
 			for(j=0;j<3;j++){
+				if(ptr[j] == ' '){
+					break;
+				}
 				ext[j] = ptr[j+8];
 			}
 
@@ -53,18 +56,18 @@ int sizeOfFile(char* originalFilename, char* ptr){
 			strcat(filename, ext);
 
 			if(strcmp(originalFilename, filename) == 0){
-				result = (ptr[28] & 0xFF) + ((ptr[29] & 0xFF) << 8) + ((ptr[30] & 0xFF) << 16) + ((ptr[31] & 0xFF) << 24);
+				fileSize = (ptr[28] & 0xFF) + ((ptr[29] & 0xFF) << 8) + ((ptr[30] & 0xFF) << 16) + ((ptr[31] & 0xFF) << 24);
 				break;
 			}
 		}
 		ptr = ptr + 32;
 	}
 	
-	return result;
+	return fileSize;
 }
 
 int firstLogicalSectorAddress(char* originalFilename, char* ptr){
-	int result = -1;
+	int address = -1;
 
 	while(ptr[0] != 0x00){
 		if((ptr[11] & 0b00000010) == 0 && (ptr[11] & 0b00001000) == 0){
@@ -80,6 +83,9 @@ int firstLogicalSectorAddress(char* originalFilename, char* ptr){
 			char* ext = malloc(sizeof(char));
 			int j;
 			for(j=0;j<3;j++){
+				if(ptr[j] == ' '){
+					break;
+				}
 				ext[j] = ptr[j+8];
 			}
 			
@@ -87,13 +93,13 @@ int firstLogicalSectorAddress(char* originalFilename, char* ptr){
 			strcat(filename, ext);
 
 			if(strcmp(originalFilename, filename) == 0){
-				result = ptr[26] + (ptr[27] << 8);
+				address = ptr[26] + (ptr[27] << 8);
 			}
 		}
 		ptr = ptr + 32;
 	}
 
-	return result;
+	return address;
 }
 
 void makeCopy(char* ptr1, char* ptr2, char* filename, int size){
